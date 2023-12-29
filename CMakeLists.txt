@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(placeholder-name CXX)
+project(AINomina CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,9 +46,8 @@ add_compile_options(
 
 # Setup your project here
 # Use target_add_coverage(target) to include target in coverage tests
+add_subdirectory(deps)
+add_subdirectory(src)
 
 enable_testing()
 # Setup your tests here
-
-#Setup your installation directives here
-install(DIRECTORY include/typelist_utils DESTINATION include)
