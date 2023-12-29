@@ -1,0 +1,115 @@
+name: Build and Test Package
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  RunSonar:
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/cpp-playground/containers
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+
+    env:
+      SONAR_SCANNER_VERSION: 4.7.0.2747
+      SONAR_HOST_URL: "https://sonarcloud.io"
+      CC: /usr/bin/clang-17
+      CXX: /usr/bin/clang++-17
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'oracle'
+          java-version: 17
+      - name: Cache SonarQube packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Download and set up sonar-scanner
+        env:
+          SONAR_SCANNER_DOWNLOAD_URL: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${{ env.SONAR_SCANNER_VERSION }}-linux.zip
+        run: |
+          mkdir -p $HOME/.sonar
+          curl -sSLo $HOME/.sonar/sonar-scanner.zip ${{ env.SONAR_SCANNER_DOWNLOAD_URL }} 
+          unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
+          echo "$HOME/.sonar/sonar-scanner-${{ env.SONAR_SCANNER_VERSION }}-linux/bin" >> $GITHUB_PATH
+
+      - name: Generate compilation database
+        run: |
+          mkdir build
+          cmake -S . -B build
+          
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner
+
+  RunCodeCov:
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/cpp-playground/containers
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+    env:
+      CC: /usr/bin/clang-17
+      CXX: /usr/bin/clang++-17
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: |
+          mkdir build
+          cmake -S . -B build  -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+          cmake --build build/
+          #Invoke tests HERE
+          llvm-profdata-17 merge -sparse ./default.profraw -o ./default.profdata
+          llvm-cov-17 show ./build/typelist_utils -instr-profile=./default.profdata --format=text include test > ./build/coverage.txt
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+
+  LintCheck:
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/cpp-playground/containers
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.github_token }}
+    env:
+      CC: /usr/bin/clang-17
+      CXX: /usr/bin/clang++-17
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure
+        run: |
+          cmake -S . -B build
+          cp build/compile_commands.json .
+
+      - name: Check formatting
+        run: |
+          find . \( -name \*.h -o -name \*.hh -o -name \*.hpp -o -name \*.cpp -o -name \*.cc \) -not -path "./build/*" -exec clang-format-17 -style=file -i --dry-run -Werror {} +
+
+      - name: Check clang tidy
+        run: |
+          find . \( -name \*.h -o -name \*.hh -o -name \*.hpp -o -name \*.cpp -o -name \*.cc \) -not -path "./build/*" -exec clang-tidy-17 {} +
+
