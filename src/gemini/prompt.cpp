@@ -1,26 +1,24 @@
 #include "AINomina/gemini/prompt.hpp"
 
-#include <algorithm>
-#include <iostream>
+#include <fstream>
 #include <regex>
 
 namespace
 {
-std::vector<std::string> find_variables(const std::string& text)
+std::set<std::string> find_variables(std::string text)
 {
-    std::vector<std::string> variables;
+    std::set<std::string> variables;
 
-    std::regex variable_pattern("{{([^{}]+)}}");
-    for (std::smatch variables_matches;
-         std::regex_search(text, variables_matches, variable_pattern);)
+    std::regex variable_pattern("<([^<>]+)>");
+    for (std::smatch match; std::regex_search(text, match, variable_pattern);)
     {
-        std::ranges::transform(variables_matches, std::back_inserter(variables), [](const auto& m) {
-            return m.str();
-        });
+        variables.insert(match[1]);
+        text = match.suffix();
     }
 
-    return {};
+    return variables;
 }
+
 }  // namespace
 
 namespace ain::gemini
@@ -29,5 +27,50 @@ namespace ain::gemini
 prompt::prompt(const std::string& text) noexcept :
   m_text{ text }, m_unreplaced_variables{ find_variables(m_text) }
 {}
+
+prompt::status prompt::replace(const std::string& variable, const std::string& value)
+{
+    if (auto it = std::find(m_unreplaced_variables.begin(), m_unreplaced_variables.end(), variable);
+        it != m_unreplaced_variables.end())
+    {
+        m_unreplaced_variables.erase(it);
+        m_text = std::regex_replace(m_text, std::regex("<" + variable + ">"), value);
+        return status::ok;
+    }
+    else
+    {
+        return status::variable_not_found;
+    }
+}
+
+std::tuple<std::string, prompt::status> prompt::get_text() const
+{
+    if (m_unreplaced_variables.empty())
+    {
+        return { m_text, status::ok };
+    }
+    else
+    {
+        return { m_text, status::unreplaced_variable };
+    }
+}
+
+std::unordered_map<std::string, prompt> load_prompts(const std::filesystem::path& path)
+{
+    std::unordered_map<std::string, prompt> prompts;
+
+    for (const auto& entry : std::filesystem::directory_iterator(path))
+    {
+        if (entry.is_regular_file())
+        {
+            std::ifstream file{ entry.path() };
+            std::string text{ std::istreambuf_iterator<char>(file),
+                              std::istreambuf_iterator<char>() };
+            prompts.emplace(entry.path().stem().string(), text);
+        }
+    }
+
+    return prompts;
+}
 
 }  // namespace ain::gemini
