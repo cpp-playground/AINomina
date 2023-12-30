@@ -40,14 +40,14 @@ void gemini_client::querry(const std::string& request)
     request_json["generationConfig"]["topK"] = 1;
     request_json["generationConfig"]["topP"] = 1;
     request_json["generationConfig"]["maxOutputTokens"] = 2048;
-    request_json["contents"]["parts"] = { { "text", request } };
+    request_json["contents"]["parts"] = { { "text", request }, { "text", request } };
 
     auto res = https_client.Post("/v1beta/models/gemini-pro:generateContent?key="s + m_api_key,
                                  request_json.dump(),
                                  "application/json");
 
-    std::cout << res->status << std::endl;
-    std::cout << res->body << std::endl;
+    auto rep = nlohmann::json::parse(res->body);
+    std::cout << rep["candidates"][0]["content"].dump() << std::endl;
 }
 
 }  // namespace ain::gemini
