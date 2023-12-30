@@ -15,6 +15,12 @@ namespace ain::gemini
 class [[nodiscard]] Prompt
 {
   public:
+    /**
+     * @brief Constructs a prompt from a string.
+     * The existing variables are found and saved for later replacement.
+     *
+     * @param raw_text The string to construct the prompt from.
+     */
     explicit Prompt(const std::string& raw_text) noexcept;
     Prompt(const Prompt& prompt) noexcept = default;
     Prompt(Prompt&& prompt) noexcept = default;
