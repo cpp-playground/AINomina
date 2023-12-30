@@ -46,21 +46,6 @@ std::string unescape(const std::string& escaped_string)
         res += character;
     }
 
-    // Remove leading and trailing whitespaces
-    boost::trim(res);
-
-    // If res starts by ```json, remove it
-    if (res.size() >= 7 && res.substr(0, 7) == "```json")
-    {
-        res = res.substr(7);
-    }
-
-    // If res ends by ```, remove it
-    if (res.size() >= 3 && res.substr(res.size() - 3, 3) == "```")
-    {
-        res = res.substr(0, res.size() - 3);
-    }
-
     return res;
 }
 
@@ -100,6 +85,18 @@ std::optional<nlohmann::json> parse_response(const nlohmann::json& response)
     }
 
     auto text = result["content"]["parts"][0]["text"].get<std::string>();
+
+    boost::trim(text);
+    if (text.starts_with("```json"))
+    {
+        text = text.substr(7);
+    }
+
+    if (text.ends_with("```"))
+    {
+        text = text.substr(0, text.size() - 3);
+    }
+
     return nlohmann::json::parse(unescape(text));
 }
 }  // namespace
