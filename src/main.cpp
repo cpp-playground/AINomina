@@ -1,13 +1,20 @@
 
 #include <iostream>
 
+#include "AINomina/gemini/gemini_client.hpp"
 #include "AINomina/gemini/prompt.hpp"
-#include "AINomina/gemini/request.hpp"
 
 int main(int, char** argv)
 {
     auto prompts = ain::gemini::Prompt::load_from_directory(argv[1]);
-    ain::gemini::gemini_client client(argv[2], 1);
+    ain::gemini::GeminiClient client(argv[2], 10);
+
+    std::ifstream file{ argv[3] };
+    if (!file.is_open())
+    {
+        throw std::runtime_error{ "Could not open file " + std::string{ argv[3] } };
+    }
+    std::string code{ std::istreambuf_iterator<char>{ file }, std::istreambuf_iterator<char>{} };
 
     for (auto& [name, prompt] : prompts)
     {
@@ -18,8 +25,7 @@ int main(int, char** argv)
         // }
 
         // std::cout << "Now replacing" << std::endl;
-        prompt.replace("variable", "Ain");
-        prompt.replace("code", "int main(int Ain, char** argv) { return 0; }");
+        prompt.replace("code", code);
 
         // std::cout << prompt.text() << std::endl;
         // for (auto& var : prompt.variables())
@@ -27,6 +33,13 @@ int main(int, char** argv)
         //     std::cout << var << std::endl;
         // }
 
-        client.querry(prompt.text());
+        if (auto res = client.querry(ain::gemini::QuerryParameters{}, prompt))
+        {
+            std::cout << res->dump(4) << std::endl;
+        }
+        else
+        {
+            std::cout << "Failed to querry" << std::endl;
+        }
     }
 }

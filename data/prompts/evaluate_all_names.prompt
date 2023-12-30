@@ -5,7 +5,9 @@ Quality can only be one of the following:
 - BAD
 
 Consider the following C++ code:
+```cpp
 <code>
+```
 
 Output:
 The output must be formatted as a JSON list. For example the following are valid outputs:

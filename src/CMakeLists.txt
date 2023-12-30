@@ -1,6 +1,6 @@
 find_package(Threads REQUIRED)
 
-add_library(gemini STATIC gemini/request.cpp gemini/prompt.cpp)
+add_library(gemini STATIC gemini/prompt.cpp gemini/gemini_client.cpp)
 
 target_include_directories(gemini PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(gemini httplib::httplib nlohmann_json::nlohmann_json)
