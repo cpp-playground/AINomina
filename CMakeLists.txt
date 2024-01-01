@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(placeholder-name CXX)
+project(AINomina C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,9 @@ set(
   CMAKE_EXPORT_COMPILE_COMMANDS
   ON
 )
-
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
+endif()
 # Coverage
 set(
   CTEST_COVERAGE_COMMAND
@@ -37,18 +39,17 @@ function(target_add_coverage target)
   endif()
 endfunction()
 
-add_compile_options(
-  -Wall
-  -Wextra
-  -pedantic
-  -Werror
-)
+# add_compile_options(
+#   -Wall
+#   -Wextra
+#   -pedantic
+#   -Werror
+# )
 
 # Setup your project here
 # Use target_add_coverage(target) to include target in coverage tests
+add_subdirectory(deps)
+add_subdirectory(src)
 
 enable_testing()
 # Setup your tests here
-
-#Setup your installation directives here
-install(DIRECTORY include/typelist_utils DESTINATION include)
