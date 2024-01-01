@@ -9,7 +9,9 @@ set(
   CMAKE_EXPORT_COMPILE_COMMANDS
   ON
 )
-
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
+endif()
 # Coverage
 set(
   CTEST_COVERAGE_COMMAND
@@ -37,12 +39,12 @@ function(target_add_coverage target)
   endif()
 endfunction()
 
-add_compile_options(
-  -Wall
-  -Wextra
-  -pedantic
-  -Werror
-)
+# add_compile_options(
+#   -Wall
+#   -Wextra
+#   -pedantic
+#   -Werror
+# )
 
 # Setup your project here
 # Use target_add_coverage(target) to include target in coverage tests

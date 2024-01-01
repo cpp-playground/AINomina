@@ -1,45 +1,41 @@
 
-#include <iostream>
+#include <clang/Tooling/CommonOptionsParser.h>
+#include <clang/Tooling/Tooling.h>
+#include <llvm/Support/CommandLine.h>
 
-#include "AINomina/gemini/gemini_client.hpp"
-#include "AINomina/gemini/prompt.hpp"
+#include "AINomina/evaluate_names_action.hpp"
 
-int main(int, char** argv)
+int main(int a, const char** argv)
 {
-    auto prompts = ain::gemini::Prompt::load_from_directory(argv[1]);
-    ain::gemini::GeminiClient client(argv[2], 10);
+    llvm::cl::OptionCategory ainomina_options("AINomina options");
+    llvm::cl::extrahelp common_help(clang::tooling::CommonOptionsParser::HelpMessage);
 
-    std::ifstream file{ argv[3] };
-    if (!file.is_open())
+    llvm::cl::opt<std::string> api_key("k",
+                                       llvm::cl::desc("Gemini API key to use for the requests"),
+                                       llvm::cl::value_desc("API-KEY"),
+                                       llvm::cl::Required);
+    api_key.addCategory(ainomina_options);
+
+    llvm::cl::opt<int> rate_limiting(
+        "r", llvm::cl::desc("Maximum Gemin request per minutes"), llvm::cl::value_desc("RPM"));
+    rate_limiting.addCategory(ainomina_options);
+    rate_limiting.setInitialValue(60);
+    llvm::cl::extrahelp ainomina_help("More help\n");
+
+    auto expected_parser = clang::tooling::CommonOptionsParser::create(a, argv, ainomina_options);
+    if (!expected_parser)
     {
-        throw std::runtime_error{ "Could not open file " + std::string{ argv[3] } };
+        // Fail gracefully for unsupported options.
+        llvm::errs() << expected_parser.takeError();
+        return 1;
     }
-    std::string code{ std::istreambuf_iterator<char>{ file }, std::istreambuf_iterator<char>{} };
 
-    for (auto& [name, prompt] : prompts)
-    {
-        std::cout << "Promting " << name << std::endl;
-        // for (auto& var : prompt.variables())
-        // {
-        //     std::cout << var << std::endl;
-        // }
+    auto& option_parser = expected_parser.get();
+    clang::tooling::ClangTool ainomina(option_parser.getCompilations(),
+                                       option_parser.getSourcePathList());
 
-        // std::cout << "Now replacing" << std::endl;
-        prompt.replace("code", code);
+    auto action_factory = ain::new_evaluate_names_action_factory<ain::EvaluateNamesAction>(
+        api_key.getValue(), rate_limiting.getValue());
 
-        // std::cout << prompt.text() << std::endl;
-        // for (auto& var : prompt.variables())
-        // {
-        //     std::cout << var << std::endl;
-        // }
-
-        if (auto res = client.querry(ain::gemini::QuerryParameters{}, prompt))
-        {
-            std::cout << res->dump(4) << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to querry" << std::endl;
-        }
-    }
+    return ainomina.run(action_factory.get());
 }
