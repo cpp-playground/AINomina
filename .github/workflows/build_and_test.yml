@@ -49,6 +49,7 @@ jobs:
 
       - name: Generate compilation database
         run: |
+          apt-get install -y libcurl-dev zlib1g-dev libedit-dev 
           mkdir build
           cmake -S . -B build
           
@@ -75,6 +76,7 @@ jobs:
 
       - name: Build
         run: |
+          apt-get install -y libcurl-dev zlib1g-dev libedit-dev 
           mkdir build
           cmake -S . -B build  -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
           cmake --build build/
@@ -102,6 +104,7 @@ jobs:
 
       - name: Configure
         run: |
+          apt-get install -y libcurl-dev zlib1g-dev libedit-dev 
           cmake -S . -B build
           cp build/compile_commands.json .
 
